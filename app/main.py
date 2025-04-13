@@ -22,6 +22,7 @@ app = FastAPI(title="Sentiment Analysis Helpdesk")
 
 # Configure paths and static files
 base_dir = Path(__file__).parent  # Remove .parent to point to app directory
+models_dir = base_dir / "models"
 static_dir = base_dir / "static"  # Now points to app/static (adjust based on your actual structure)
 templates_dir = base_dir / "templates"
 
