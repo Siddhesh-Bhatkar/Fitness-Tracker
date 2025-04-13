@@ -21,10 +21,9 @@ logger = logging.getLogger(__name__)
 app = FastAPI(title="Sentiment Analysis Helpdesk")
 
 # Configure paths and static files
-base_dir = Path(__file__).parent.parent
-static_dir = base_dir / "static"
+base_dir = Path(__file__).parent  # Remove .parent to point to app directory
+static_dir = base_dir / "static"  # Now points to app/static (adjust based on your actual structure)
 templates_dir = base_dir / "templates"
-models_dir = Path(__file__).parent / "models"
 
 # Mount static files directory
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
