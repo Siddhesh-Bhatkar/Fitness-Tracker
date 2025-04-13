@@ -1,0 +1,193 @@
+/* Basic Reset */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+/* Global Styles */
+body {
+    font-family: Arial, sans-serif;
+    line-height: 1.6;
+    background-color: #f4f7f9;
+    color: #333;
+}
+
+.container {
+    width: 90%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Header */
+header {
+    background-color: #004a99;
+    color: #fff;
+    padding: 20px 0;
+    margin-bottom: 20px;
+}
+
+header h1 {
+    font-size: 2em;
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+header p {
+    text-align: center;
+    font-size: 1.1em;
+}
+
+/* Controls */
+.controls {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.controls button {
+    background-color: #004a99;
+    border: none;
+    color: #fff;
+    padding: 10px 15px;
+    border-radius: 5px;
+    font-size: 1em;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: background-color 0.3s ease;
+    cursor: pointer;
+}
+
+.controls button svg {
+    width: 20px;
+    height: 20px;
+}
+
+.controls button:hover:not(:disabled) {
+    background-color: #003d80;
+}
+
+.controls button:disabled {
+    background-color: #a3a3a3;
+    cursor: not-allowed;
+}
+
+/* Dashboard Grid */
+.dashboard {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+@media (min-width: 768px) {
+    .dashboard {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 1024px) {
+    .dashboard {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* Cards */
+.card {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.card h2 {
+    margin-bottom: 15px;
+    font-size: 1.5em;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 10px;
+}
+
+/* Waveform and Transcript */
+#waveform {
+    height: 150px;
+    background-color: #e1e1e1;
+    border-radius: 4px;
+    margin-bottom: 10px;
+}
+
+.transcript-container {
+    height: 200px;
+    overflow-y: auto;
+    padding: 10px;
+    border: 1px solid #ddd;
+    background-color: #fafafa;
+    border-radius: 4px;
+}
+
+/* Sentiment Indicators */
+.sentiment-indicator {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.sentiment-label {
+    font-weight: bold;
+    padding: 8px;
+    border-radius: 4px;
+    background-color: #f0f0f0;
+}
+
+/* Session Statistics */
+.sentiment-stats {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 20px;
+}
+
+.stat-box {
+    flex: 1;
+    margin: 0 10px;
+    background-color: #e7e7e7;
+    text-align: center;
+    padding: 15px;
+    border-radius: 4px;
+}
+
+.stat-box h3 {
+    margin-bottom: 8px;
+    font-size: 1.2em;
+}
+
+/* Helpdesk Suggestions */
+.help-card {
+    margin-top: 20px;
+    text-align: center;
+}
+
+.suggestions-container {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Footer */
+footer {
+    background-color: #004a99;
+    color: #fff;
+    padding: 15px 0;
+    margin-top: 20px;
+    text-align: center;
+}
+
+/* Utility Classes */
+.disabled {
+    opacity: 0.6;
+    pointer-events: none;
+}
