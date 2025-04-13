@@ -8,40 +8,55 @@ import librosa
 import joblib
 import speech_recognition as sr
 from pathlib import Path
-from transformers import pipeline
 import tempfile
 import os
 import subprocess
+import logging
+from transformers import pipeline
 
-app = FastAPI()
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+app = FastAPI(title="Sentiment Analysis Helpdesk")
 
 # Configure paths and static files
 base_dir = Path(__file__).parent.parent
 static_dir = base_dir / "static"
 templates_dir = base_dir / "templates"
+models_dir = Path(__file__).parent / "models"
+
+# Mount static files directory
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
 templates = Jinja2Templates(directory=templates_dir)
 
-# Mock models for demo purposes
-# In production, you would load actual trained models
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.preprocessing import LabelEncoder
-tone_model = RandomForestClassifier(n_estimators=10)
-tone_model.feature_names_in_ = [f'feature_{i}' for i in range(15)]
-label_encoder = LabelEncoder()
-label_encoder.classes_ = np.array(['NEUTRAL', 'POSITIVE', 'NEGATIVE'])
+# Load models
+try:
+    label_encoder = joblib.load(models_dir / "label_encoder.pkl")
+    tone_model = joblib.load(models_dir / "tone_model.pkl")
+    logger.info("Tone model and label encoder loaded successfully")
+except Exception as e:
+    logger.error(f"Error loading tone model or label encoder: {str(e)}")
+    # Create mock models as fallback
+    from sklearn.ensemble import RandomForestClassifier
+    from sklearn.preprocessing import LabelEncoder
+    tone_model = RandomForestClassifier(n_estimators=10)
+    tone_model.feature_names_in_ = [f'feature_{i}' for i in range(15)]
+    label_encoder = LabelEncoder()
+    label_encoder.classes_ = np.array(['NEUTRAL', 'POSITIVE', 'NEGATIVE'])
 
 # NLP pipeline
 try:
     text_sentiment_pipeline = pipeline("sentiment-analysis")
-    print("Text sentiment pipeline loaded")
+    logger.info("Text sentiment pipeline loaded successfully")
 except Exception as e:
-    print(f"Error loading sentiment pipeline: {str(e)}")
+    logger.error(f"Error loading sentiment pipeline: {str(e)}")
     # Fallback function
     def mock_sentiment_analysis(text):
         return [{"label": "NEUTRAL", "score": 0.95}]
     text_sentiment_pipeline = mock_sentiment_analysis
 
+# Helper function to convert audio formats
 def convert_audio_to_wav(audio_data: bytes) -> bytes:
     with tempfile.NamedTemporaryFile(suffix='.webm', delete=False) as webm_file:
         webm_file.write(audio_data)
@@ -72,7 +87,7 @@ def convert_audio_to_wav(audio_data: bytes) -> bytes:
             return wav_file.read()
             
     except subprocess.CalledProcessError as e:
-        print("FFmpeg error:", e.stderr.decode())
+        logger.error(f"FFmpeg error: {e.stderr.decode()}")
         raise RuntimeError(f"FFmpeg conversion failed: {e.stderr.decode()}")
         
     finally:
@@ -81,8 +96,8 @@ def convert_audio_to_wav(audio_data: bytes) -> bytes:
             os.unlink(webm_path)
             if os.path.exists(wav_path):
                 os.unlink(wav_path)
-        except:
-            pass
+        except Exception as e:
+            logger.error(f"Error cleaning up temporary files: {str(e)}")
 
 def transcribe_wav_data(wav_data: bytes) -> str:
     recognizer = sr.Recognizer()
@@ -92,11 +107,14 @@ def transcribe_wav_data(wav_data: bytes) -> str:
     
     try:
         audio = sr.AudioData(wav_data, sample_rate=16000, sample_width=2)
-        return recognizer.recognize_google(audio, language="en-US")
+        transcribed_text = recognizer.recognize_google(audio, language="en-US")
+        logger.info(f"Transcription successful: {transcribed_text[:50]}...")
+        return transcribed_text
     except sr.UnknownValueError:
+        logger.info("No speech detected in audio")
         return ""
     except Exception as e:
-        print(f"Transcription error: {str(e)}")
+        logger.error(f"Transcription error: {str(e)}")
         return ""
 
 def extract_features_from_wav(wav_data: bytes) -> np.ndarray:
@@ -105,18 +123,24 @@ def extract_features_from_wav(wav_data: bytes) -> np.ndarray:
         y, sr = librosa.load(audio_buffer, sr=16000, duration=30)  # Limit to 30s audio
         
         if len(y) == 0:
+            logger.warning("Empty audio data detected")
             return np.zeros((1, 15))  # Return empty features for bad audio
 
         mfccs = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=13)
         pitch = librosa.piptrack(y=y, sr=sr)
-        return np.hstack([
+        rms = librosa.feature.rms(y=y)
+        
+        features = np.hstack([
             np.mean(mfccs, axis=1),
             np.mean(pitch),
-            np.mean(librosa.feature.rms(y=y))
+            np.mean(rms)
         ]).reshape(1, -1)
         
+        logger.info(f"Features extracted successfully, shape: {features.shape}")
+        return features
+        
     except Exception as e:
-        print(f"Feature extraction error: {str(e)}")
+        logger.error(f"Feature extraction error: {str(e)}")
         return np.zeros((1, 15))  # Fallback empty features
 
 def analyze_sentiment(text: str) -> str:
@@ -132,9 +156,10 @@ def analyze_sentiment(text: str) -> str:
                 return "POSITIVE"
             elif "NEGATIVE" in label or "negative" in label.lower():
                 return "NEGATIVE"
+        logger.info(f"Text sentiment analysis result: {label}")
         return "NEUTRAL"
     except Exception as e:
-        print(f"Error in sentiment analysis: {str(e)}")
+        logger.error(f"Error in sentiment analysis: {str(e)}")
         return "NEUTRAL"
 
 def predict_tone(wav_data: bytes) -> str:
@@ -148,9 +173,11 @@ def predict_tone(wav_data: bytes) -> str:
             features = np.pad(features, pad_width, mode='constant')
         
         tone_probs = tone_model.predict_proba(features)[0]
-        return label_encoder.inverse_transform([np.argmax(tone_probs)])[0]
+        tone_result = label_encoder.inverse_transform([np.argmax(tone_probs)])[0]
+        logger.info(f"Tone sentiment prediction: {tone_result}")
+        return tone_result
     except Exception as e:
-        print(f"Tone prediction error: {str(e)}")
+        logger.error(f"Tone prediction error: {str(e)}")
         return "NEUTRAL"  # Fallback to neutral on errors
 
 def fuse_sentiments(tone_label: str, text_label: str) -> str:
@@ -159,6 +186,46 @@ def fuse_sentiments(tone_label: str, text_label: str) -> str:
     if tone_label == text_label:
         return tone_label
     return text_label
+
+def generate_suggestions(sentiment: str, text: str) -> list:
+    """Generate helpdesk suggestions based on sentiment analysis and transcript."""
+    suggestions = []
+    
+    if not text or text.strip() == "":
+        return ["No speech detected. Please try again."]
+    
+    # Basic suggestion templates
+    if sentiment == "NEGATIVE":
+        suggestions = [
+            "Customer sounds upset. Consider escalating this case.",
+            "Acknowledge their frustration and offer immediate assistance.",
+            "Use empathetic language and active listening."
+        ]
+    elif sentiment == "POSITIVE":
+        suggestions = [
+            "Customer seems satisfied. Consider asking for feedback.",
+            "Good opportunity to mention additional services or products.",
+            "Thank them for their positive engagement."
+        ]
+    else:  # NEUTRAL
+        suggestions = [
+            "Maintain professional tone and clarity.",
+            "Ask follow-up questions to better understand their needs.",
+            "Provide clear step-by-step information."
+        ]
+    
+    # Add content-specific suggestions based on keywords
+    lower_text = text.lower()
+    if "problem" in lower_text or "issue" in lower_text or "not working" in lower_text:
+        suggestions.append("Customer is reporting a technical issue. Consider using troubleshooting scripts.")
+    
+    if "price" in lower_text or "cost" in lower_text or "expensive" in lower_text:
+        suggestions.append("Price concerns detected. Review available discounts or payment plans.")
+    
+    if "wait" in lower_text or "long time" in lower_text:
+        suggestions.append("Customer may be frustrated with wait times. Acknowledge and apologize for any delays.")
+    
+    return suggestions
 
 @app.get("/", response_class=HTMLResponse)
 async def get_index(request: Request):
@@ -184,15 +251,24 @@ async def analyze_audio(file: UploadFile = File(...)):
         # Fuse sentiments
         final_sentiment = fuse_sentiments(tone_sentiment, text_sentiment)
         
+        # Generate helpdesk suggestions
+        suggestions = generate_suggestions(final_sentiment, transcribed_text)
+        
         return {
             "transcribed_text": transcribed_text,
             "text_sentiment": text_sentiment,
             "tone_sentiment": tone_sentiment,
-            "final_sentiment": final_sentiment
+            "final_sentiment": final_sentiment,
+            "suggestions": suggestions
         }
     except Exception as e:
+        logger.error(f"Error in analyze_audio endpoint: {str(e)}")
         return {"error": str(e)}
 
 @app.get("/health")
 async def health_check():
-    return {"status": "ok"}
+    return {"status": "ok", "models_loaded": tone_model is not None and label_encoder is not None}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)

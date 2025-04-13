@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Real-time Sentiment Analysis</title>
+    <title>Sentiment Analysis Helpdesk</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/wavesurfer.js/6.6.3/wavesurfer.min.js"></script>
     <link rel="stylesheet" href="/static/css/styles.css">
@@ -11,8 +11,8 @@
 <body>
     <header>
         <div class="container">
-            <h1>Real-time Sentiment Analysis</h1>
-            <p>Analyze speech sentiment from both tone and content</p>
+            <h1>Sentiment Analysis Helpdesk</h1>
+            <p>Analyze customer interactions in real-time through speech tone and content</p>
         </div>
     </header>
 
@@ -64,15 +64,15 @@
             <div class="card">
                 <h2>Session Statistics</h2>
                 <div class="sentiment-stats">
-                    <div class="stat-box">
+                    <div class="stat-box positive-stat">
                         <h3>Positive</h3>
                         <div class="value" id="positiveCount">0</div>
                     </div>
-                    <div class="stat-box">
+                    <div class="stat-box neutral-stat">
                         <h3>Neutral</h3>
                         <div class="value" id="neutralCount">0</div>
                     </div>
-                    <div class="stat-box">
+                    <div class="stat-box negative-stat">
                         <h3>Negative</h3>
                         <div class="value" id="negativeCount">0</div>
                     </div>
@@ -80,7 +80,20 @@
                 <canvas id="sentimentPieChart"></canvas>
             </div>
         </div>
+        
+        <div class="card help-card">
+            <h2>Helpdesk Suggestions</h2>
+            <div id="suggestions" class="suggestions-container">
+                <p>Record and analyze customer conversations to receive contextual suggestions.</p>
+            </div>
+        </div>
     </div>
+
+    <footer>
+        <div class="container">
+            <p>Sentiment Analysis Helpdesk &copy; 2025</p>
+        </div>
+    </footer>
 
     <script src="/static/js/app.js"></script>
 </body>

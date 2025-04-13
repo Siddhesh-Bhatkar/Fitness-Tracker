@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const positiveCountEl = document.getElementById('positiveCount');
     const neutralCountEl = document.getElementById('neutralCount');
     const negativeCountEl = document.getElementById('negativeCount');
+    const suggestionsEl = document.getElementById('suggestions');
 
     // State variables
     let isRecording = false;
@@ -19,6 +20,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let sentimentHistory = [];
     let sentimentCounts = { POSITIVE: 0, NEUTRAL: 0, NEGATIVE: 0 };
     let audioBlob;
+    let analysisInProgress = false;
     
     // Initialize the waveform visualizer
     const wavesurfer = WaveSurfer.create({
@@ -93,6 +95,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function processAnalysisResults(data) {
         if (data.error) {
             console.error('Server error:', data.error);
+            displayError(`Analysis error: ${data.error}`);
             return;
         }
 
@@ -102,6 +105,12 @@ document.addEventListener('DOMContentLoaded', function() {
             transcriptBubble.className = 'transcript-bubble';
             transcriptBubble.textContent = data.transcribed_text;
             transcriptContainer.appendChild(transcriptBubble);
+            transcriptContainer.scrollTop = transcriptContainer.scrollHeight;
+        } else {
+            const emptyTranscriptMsg = document.createElement('div');
+            emptyTranscriptMsg.className = 'transcript-bubble empty';
+            emptyTranscriptMsg.textContent = 'No speech detected. Please try again with clearer audio.';
+            transcriptContainer.appendChild(emptyTranscriptMsg);
             transcriptContainer.scrollTop = transcriptContainer.scrollHeight;
         }
 
@@ -115,6 +124,41 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Update sentiment counts
         updateSentimentCounts(data.final_sentiment);
+
+        // Update suggestions
+        updateSuggestions(data.suggestions || []);
+    }
+
+    // Update suggestions display
+    function updateSuggestions(suggestions) {
+        suggestionsEl.innerHTML = '';
+        
+        if (suggestions.length === 0) {
+            const noSuggestions = document.createElement('p');
+            noSuggestions.textContent = 'No specific suggestions available.';
+            suggestionsEl.appendChild(noSuggestions);
+            return;
+        }
+        
+        const suggestionsList = document.createElement('ul');
+        suggestions.forEach(suggestion => {
+            const item = document.createElement('li');
+            item.textContent = suggestion;
+            suggestionsList.appendChild(item);
+        });
+        
+        suggestionsEl.appendChild(suggestionsList);
+    }
+
+    // Display error message
+    function displayError(message) {
+        const errorEl = document.createElement('div');
+        errorEl.className = 'error-message';
+        errorEl.textContent = message;
+        
+        // Add to transcript container for visibility
+        transcriptContainer.appendChild(errorEl);
+        transcriptContainer.scrollTop = transcriptContainer.scrollHeight;
     }
 
     // Update sentiment indicator styling
@@ -234,6 +278,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 startButton.disabled = true;
                 stopButton.disabled = false;
                 analyzeButton.disabled = true;
+                
+                // Clear suggestions when starting new recording
+                suggestionsEl.innerHTML = '<p>Recording in progress. Analysis results will appear here.</p>';
             });
             
             mediaRecorder.addEventListener('stop', () => {
@@ -246,14 +293,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Create audio blob when recording stops
                 audioBlob = new Blob(audioChunks, { type: 'audio/webm; codecs=opus' });
+                
+                // Display recording duration
+                const durationSeconds = audioChunks.length * 0.1; // Rough estimate
+                recordingStatus.textContent = `Recording stopped (approx. ${durationSeconds.toFixed(1)}s)`;
             });
             
             // Start recording
-            mediaRecorder.start();
+            mediaRecorder.start(100); // Capture in 100ms chunks
             
         } catch (error) {
             console.error('Error accessing microphone:', error);
             alert('Error accessing microphone. Please ensure you have given permission to use the microphone.');
+            recordingStatus.textContent = 'Microphone access denied';
         }
     }
 
@@ -272,7 +324,14 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
+        if (analysisInProgress) {
+            alert('Analysis already in progress');
+            return;
+        }
+        
         try {
+            analysisInProgress = true;
+            
             // Create FormData and append the audio blob
             const formData = new FormData();
             formData.append('file', audioBlob, 'audio.webm');
@@ -280,6 +339,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Show loading state
             analyzeButton.disabled = true;
             analyzeButton.textContent = 'Analyzing...';
+            suggestionsEl.innerHTML = '<p>Processing audio... Please wait.</p>';
             
             // Send to server for analysis
             const response = await fetch('/analyze', {
@@ -297,22 +357,54 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (error) {
             console.error('Error analyzing audio:', error);
             alert('Error analyzing audio. Please try again.');
+            suggestionsEl.innerHTML = '<p>Analysis error. Please try recording again.</p>';
         } finally {
             // Reset button state
             analyzeButton.disabled = false;
             analyzeButton.textContent = 'Analyze';
+            analysisInProgress = false;
         }
     }
 
-    // Event listeners
-    startButton.addEventListener('click', startRecording);
-    stopButton.addEventListener('click', stopRecording);
-    analyzeButton.addEventListener('click', analyzeAudio);
-
-    // Clean up on page unload
-    window.addEventListener('beforeunload', () => {
-        if (isRecording) {
-            stopRecording();
+    // Auto-analyze after stopping recording (optional feature)
+    function autoAnalyzeAfterStop() {
+        if (audioBlob && !analysisInProgress) {
+            setTimeout(() => {
+                analyzeAudio();
+            }, 500); // Small delay after recording stops
         }
-    });
+    }
+
+    // Check browser compatibility
+    function checkBrowserCompatibility() {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            alert('Your browser does not support audio recording. Please use a modern browser like Chrome, Firefox, or Edge.');
+            startButton.disabled = true;
+            recordingStatus.textContent = 'Recording not supported in this browser';
+        }
+    }
+
+    // Initialize application
+    function init() {
+        checkBrowserCompatibility();
+        
+        // Event listeners
+        startButton.addEventListener('click', startRecording);
+        stopButton.addEventListener('click', () => {
+            stopRecording();
+            // Uncomment below line to enable auto-analysis
+            // autoAnalyzeAfterStop(); 
+        });
+        analyzeButton.addEventListener('click', analyzeAudio);
+        
+        // Clean up on page unload
+        window.addEventListener('beforeunload', () => {
+            if (isRecording) {
+                stopRecording();
+            }
+        });
+    }
+
+    // Start the application
+    init();
 });
