@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-time Sentiment Analysis</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/wavesurfer.js/6.6.3/wavesurfer.min.js"></script>
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Real-time Sentiment Analysis</h1>
+            <p>Analyze speech sentiment from both tone and content</p>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="controls">
+            <button id="startButton">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+                Start Recording
+            </button>
+            <button id="stopButton" disabled>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="6" y="6" width="12" height="12" rx="2" ry="2"></rect>
+                </svg>
+                Stop Recording
+            </button>
+            <button id="analyzeButton" disabled>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                </svg>
+                Analyze
+            </button>
+        </div>
+
+        <div class="dashboard">
+            <div class="card">
+                <h2>Live Waveform</h2>
+                <div id="waveform"></div>
+                <div id="recordingStatus">Not recording</div>
+            </div>
+
+            <div class="card">
+                <h2>Sentiment Analysis</h2>
+                <div class="sentiment-indicator">
+                    <div class="sentiment-label" id="toneSentiment">Tone: Neutral</div>
+                    <div class="sentiment-label" id="textSentiment">Text: Neutral</div>
+                    <div class="sentiment-label" id="finalSentiment">Overall: Neutral</div>
+                </div>
+                <canvas id="sentimentChart"></canvas>
+            </div>
+
+            <div class="card">
+                <h2>Speech Transcript</h2>
+                <div class="transcript-container" id="transcriptContainer"></div>
+            </div>
+
+            <div class="card">
+                <h2>Session Statistics</h2>
+                <div class="sentiment-stats">
+                    <div class="stat-box">
+                        <h3>Positive</h3>
+                        <div class="value" id="positiveCount">0</div>
+                    </div>
+                    <div class="stat-box">
+                        <h3>Neutral</h3>
+                        <div class="value" id="neutralCount">0</div>
+                    </div>
+                    <div class="stat-box">
+                        <h3>Negative</h3>
+                        <div class="value" id="negativeCount">0</div>
+                    </div>
+                </div>
+                <canvas id="sentimentPieChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
