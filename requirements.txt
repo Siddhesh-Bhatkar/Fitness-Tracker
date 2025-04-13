@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+numpy
+librosa
+joblib
+SpeechRecognition
+python-multipart
+transformers
+jinja2
+ffmpeg-python
